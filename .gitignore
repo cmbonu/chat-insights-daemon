@@ -3,6 +3,7 @@ node_modules
 /dist
 chatid
 __pycache__
+*.zip
 
 # local env files
 .env.local

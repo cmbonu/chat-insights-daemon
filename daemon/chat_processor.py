@@ -38,32 +38,35 @@ def process_chat_text_export(chat_file):
     new_members = []
     other_events = []
     phone, message, time_of_chat = None,'',None
-    for chat_line in chat_file:
-        line_type = newline_status(chat_line)
-        split_msg = chat_line.split(": ")
-        date_and_phone = split_msg[0].split(' - ') # date_and_phone = split_msg[0].split(' - +')
-        if line_type == 1:
-            if phone is not None:
-                msg_vector.append([phone, time_of_chat,message])
-            message = ": ".join(split_msg[1:])
-            time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
-            phone = date_and_phone[1]
-        elif line_type == 2:
-            date_and_phone = split_msg[0].split(' - +')
-            time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
-            if (len(date_and_phone) > 1) and ('added' in date_and_phone[1]):           
-                admin_phone,new_member_phone = date_and_phone[1].split(' added ')
-                #new_members.append([admin_phone,new_member_phone,time_of_chat,'added'])
-                new_members.append([new_member_phone,time_of_chat,'added'])
-            else:
-                if 'left' in date_and_phone[1]:
-                    other_events.append([date_and_phone[1][:-6],time_of_chat,'left'])
-                elif 'security code' in date_and_phone[1]:
-                    other_events.append([date_and_phone[1][:-45],time_of_chat,'code'])
-                elif 'icon' in date_and_phone[1]:
-                    other_events.append([date_and_phone[1][:-27],time_of_chat,'icon'])
-        elif line_type == 3:
-                message += chat_line
+    for i,chat_line in enumerate(chat_file):
+        try:
+            line_type = newline_status(chat_line)
+            split_msg = chat_line.split(": ")
+            date_and_phone = split_msg[0].split(' - ') # date_and_phone = split_msg[0].split(' - +')
+            if line_type == 1:
+                if phone is not None:
+                    msg_vector.append([phone, time_of_chat,message])
+                message = ": ".join(split_msg[1:])
+                time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
+                phone = date_and_phone[1]
+            elif line_type == 2:
+                date_and_phone = split_msg[0].split(' - +')
+                time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
+                if (len(date_and_phone) > 1) and ('added' in date_and_phone[1]):           
+                    admin_phone,new_member_phone = date_and_phone[1].split(' added ')
+                    #new_members.append([admin_phone,new_member_phone,time_of_chat,'added'])
+                    new_members.append([new_member_phone,time_of_chat,'added'])
+                else:
+                    if 'left' in date_and_phone[1]:
+                        other_events.append([date_and_phone[1][:-6],time_of_chat,'left'])
+                    elif 'security code' in date_and_phone[1]:
+                        other_events.append([date_and_phone[1][:-45],time_of_chat,'code'])
+                    elif 'icon' in date_and_phone[1]:
+                        other_events.append([date_and_phone[1][:-27],time_of_chat,'icon'])
+            elif line_type == 3:
+                    message += chat_line
+        except ValueError as verr:
+            print(f'Error Processing Line {i} : ', verr)
         
     return  msg_vector,new_members,other_events
 
@@ -157,6 +160,9 @@ def data_process_callback(pubsub_message):
     db_session.add_all(other_events_db_models)
     db_session.commit()
     db_session.close()
+
+    basic_utils.send_email(config.sendinblue_api_key,config.sendinblue_sender_email,email_address,
+                           config.sendinblue_analysis_ready_email_template,analysis_title = file_title )
 
 if __name__ == '__main__':
     while True:
