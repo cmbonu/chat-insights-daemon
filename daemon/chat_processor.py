@@ -42,14 +42,14 @@ def process_chat_text_export(chat_file):
         try:
             line_type = newline_status(chat_line)
             split_msg = chat_line.split(": ")
-            date_and_phone = split_msg[0].split(' - ') # date_and_phone = split_msg[0].split(' - +')
-            if line_type == 1:
+            date_and_phone = split_msg[0].split(' - ')
+            if line_type == 1: #New Message Line
                 if phone is not None:
                     msg_vector.append([phone, time_of_chat,message])
                 message = ": ".join(split_msg[1:])
                 time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
                 phone = date_and_phone[1]
-            elif line_type == 2:
+            elif line_type == 2: #New Member Line
                 date_and_phone = split_msg[0].split(' - +')
                 time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
                 if (len(date_and_phone) > 1) and ('added' in date_and_phone[1]):           
@@ -71,7 +71,7 @@ def process_chat_text_export(chat_file):
     return  msg_vector,new_members,other_events
 
 def process_data(file_bytes):
-    wcc = file_bytes.decode('utf-8').split('\n')
+    wcc = file_bytes.decode('utf-8',errors="replace").replace("\x00", "\uFFFD").split('\n') #Take care of the 'NUL' character
     chat_messages,new_members,other_events = process_chat_text_export(wcc)
 
     #Process Text Data
@@ -128,7 +128,6 @@ def data_process_callback(pubsub_message):
     bucket_name = pubsub_message.attributes.get('bucket_name')
     file_path = pubsub_message.attributes.get('file_path')
     full_path = pubsub_message.attributes.get('full_path')
-    chat_bytes = gcp_utils.read_file_from_gcs(bucket_name, file_path,config.credential_path)
 
     # Acknowledge PubSub
     pubsub_message.ack()
@@ -147,6 +146,7 @@ def data_process_callback(pubsub_message):
     db_session.commit()
 
     # Do the heavy lifting and process records
+    chat_bytes = gcp_utils.read_file_from_gcs(bucket_name, file_path,config.credential_path)
     chat_messages,new_members,other_events = process_data(chat_bytes)
     
     # Save Chat Messages to Database
@@ -163,10 +163,12 @@ def data_process_callback(pubsub_message):
 
     basic_utils.send_email(config.sendinblue_api_key,config.sendinblue_sender_email,email_address,
                            config.sendinblue_analysis_ready_email_template,analysis_title = file_title )
+    
+    #TODO Handle Failed Uploads
 
 if __name__ == '__main__':
     while True:
         gcp_utils.create_pubsub_subscription(config.gcp_project_id,config.subscription_name,\
                                              config.credential_path,data_process_callback)
-        time.sleep(2)
-        print('Waiting...')
+        #print('Waiting...')
+        time.sleep(30)
