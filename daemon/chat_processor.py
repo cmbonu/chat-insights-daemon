@@ -112,7 +112,7 @@ def create_chat_message_record(upload_id,message_array):
     return new_message
 
 def create_other_events_record(upload_id, message_array):
-    member_phone = message_array[0]
+    member_phone = message_array[0][:900]
     event_time = message_array[1],
     event_type = message_array[2]
 
