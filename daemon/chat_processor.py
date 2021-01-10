@@ -35,6 +35,15 @@ def newline_status(chat_line):
         else:
             return 3 #Message Extension
 
+def process_time_field(time_string):
+    try:
+        return datetime.strptime(time_string, '%d/%m/%Y, %H:%M')
+    except:
+        try:
+            return datetime.strptime(time_string, '%m/%d/%y, %I:%M %p')
+        except:
+            raise
+
 def process_chat_text_export(chat_file):
     '''
     convert export chat text file to a feature array.
@@ -54,14 +63,16 @@ def process_chat_text_export(chat_file):
                     msg_vector.append([phone, time_of_chat,message])
                 message = ": ".join(split_msg[1:])
                 try:
-                    time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
+                    #time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
+                    time_of_chat = process_time_field(date_and_phone[0].strip())
                 except:
                     message += chat_line
                     continue
                 phone = date_and_phone[1]
             elif line_type == 2: #New Member Line
                 date_and_phone = split_msg[0].split(' - ')
-                time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
+                #time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
+                time_of_chat = process_time_field(date_and_phone[0].strip())
                 if (len(date_and_phone) > 1) and ('added' in date_and_phone[1]):           
                     admin_phone,new_member_phone = date_and_phone[1].split(' added ')
                     #new_members.append([admin_phone,new_member_phone,time_of_chat,'added'])
