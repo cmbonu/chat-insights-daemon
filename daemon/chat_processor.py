@@ -12,6 +12,12 @@ from model.db_connector import get_session
 def chat_unique_count(chat_series):
        return chat_series.nunique()
 
+def is_date(date_string):
+    try:
+        datetime.strptime(date_string, '%d/%m/%Y, %H:%M')
+    except:
+        return False
+    return True
 
 def newline_status(chat_line): 
     '''
@@ -23,8 +29,8 @@ def newline_status(chat_line):
         return 1 ## Standard
     else: ##Handle Multilines, New Members
         #New Members
-        date_and_phone = split_msg[0].split(' - +')
-        if len(date_and_phone) > 1:
+        date_and_phone = split_msg[0].split(' - ')
+        if len(date_and_phone) > 1  and is_date(date_and_phone[0]):
             return 2 #New Member
         else:
             return 3 #Message Extension
@@ -47,10 +53,14 @@ def process_chat_text_export(chat_file):
                 if phone is not None:
                     msg_vector.append([phone, time_of_chat,message])
                 message = ": ".join(split_msg[1:])
-                time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
+                try:
+                    time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
+                except:
+                    message += chat_line
+                    continue
                 phone = date_and_phone[1]
             elif line_type == 2: #New Member Line
-                date_and_phone = split_msg[0].split(' - +')
+                date_and_phone = split_msg[0].split(' - ')
                 time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
                 if (len(date_and_phone) > 1) and ('added' in date_and_phone[1]):           
                     admin_phone,new_member_phone = date_and_phone[1].split(' added ')
