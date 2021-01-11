@@ -9,40 +9,56 @@ import utils.basic_utils as basic_utils
 import utils.gcp_utils as gcp_utils
 from model.db_connector import get_session
 
+_MEDIA_KEYWORDS = ['<Media omitted>','image omitted','video omitted','GIF omitted','document omitted']
+
+def has_media(media_string):
+    for media_type in _MEDIA_KEYWORDS:
+        if media_type in media_string:
+            return True
+    return False
+
 def chat_unique_count(chat_series):
        return chat_series.nunique()
 
 def is_date(date_string):
     try:
-        datetime.strptime(date_string, '%d/%m/%Y, %H:%M')
+        process_time_field(date_string)
+        return True
     except:
         return False
-    return True
 
-def newline_status(chat_line): 
-    '''
-    Function to process multiline messages.
-    '''
+def get_date_and_phone(date_phone_string):
+    if ']' in date_phone_string:
+        return date_phone_string.split('] ')
+    else:
+        return date_phone_string.split(' - ') 
+
+def newline_status(chat_line):  
     split_msg = chat_line.split(": ")
-    date_and_phone = split_msg[0].split(' - ') # date_and_phone = split_msg[0].split(' - +')
+    date_and_phone = get_date_and_phone(split_msg[0])
     if len(split_msg) > 1 and len(date_and_phone)>1: ##Default
-        return 1 ## Standard
+        return 1, date_and_phone ## Standard
     else: ##Handle Multilines, New Members
         #New Members
-        date_and_phone = split_msg[0].split(' - ')
-        if len(date_and_phone) > 1  and is_date(date_and_phone[0]):
-            return 2 #New Member
+        #date_and_phone = split_msg[0].split(' - ')
+        if len(date_and_phone) > 1 and is_date(date_and_phone[0]):
+            return 2, date_and_phone #New Member
         else:
-            return 3 #Message Extension
+            return 3, date_and_phone #Message Extension
 
 def process_time_field(time_string):
+    if '[' in time_string:
+        time_string = time_string[time_string.index('[')+1:]
     try:
         return datetime.strptime(time_string, '%d/%m/%Y, %H:%M')
     except:
         try:
-            return datetime.strptime(time_string, '%m/%d/%y, %I:%M %p')
+            return datetime.strptime(time_string, '%d/%m/%Y, %H:%M:%S')
         except:
-            raise
+            try:
+                return datetime.strptime(time_string, '%m/%d/%y, %I:%M %p')
+            except Exception as e:
+                raise e
 
 def process_chat_text_export(chat_file):
     '''
@@ -55,28 +71,31 @@ def process_chat_text_export(chat_file):
     phone, message, time_of_chat = None,'',None
     for i,chat_line in enumerate(chat_file):
         try:
-            line_type = newline_status(chat_line)
+            line_type, date_and_phone = newline_status(chat_line)
             split_msg = chat_line.split(": ")
-            date_and_phone = split_msg[0].split(' - ')
             if line_type == 1: #New Message Line
                 if phone is not None:
                     msg_vector.append([phone, time_of_chat,message])
                 message = ": ".join(split_msg[1:])
                 try:
                     #time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
+                    #print(date_and_phone[0])
                     time_of_chat = process_time_field(date_and_phone[0].strip())
                 except:
                     message += chat_line
                     continue
                 phone = date_and_phone[1]
             elif line_type == 2: #New Member Line
-                date_and_phone = split_msg[0].split(' - ')
-                #time_of_chat = datetime.strptime(date_and_phone[0].strip(), '%d/%m/%Y, %H:%M')
                 time_of_chat = process_time_field(date_and_phone[0].strip())
-                if (len(date_and_phone) > 1) and ('added' in date_and_phone[1]):           
-                    admin_phone,new_member_phone = date_and_phone[1].split(' added ')
-                    #new_members.append([admin_phone,new_member_phone,time_of_chat,'added'])
-                    new_members.append([new_member_phone,time_of_chat,'added'])
+                if (len(date_and_phone) > 1) and ('added' in date_and_phone[1]): 
+                    try:
+                        admin_phone,new_member_phone = date_and_phone[1].split(' added ')
+                        #new_members.append([admin_phone,new_member_phone,time_of_chat,'added'])
+                        new_members.append([new_member_phone,time_of_chat,'added'])
+                    except:
+                        new_member_phone = date_and_phone[1].split(' added ')
+                        #new_members.append(['_',new_member_phone,time_of_chat,'added'])
+                        new_members.append([new_member_phone,time_of_chat,'added'])
                 else:
                     if 'left' in date_and_phone[1]:
                         other_events.append([date_and_phone[1][:-6],time_of_chat,'left'])
