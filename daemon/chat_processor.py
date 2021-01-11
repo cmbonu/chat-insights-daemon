@@ -118,7 +118,7 @@ def process_data(file_bytes):
     for x in chat_messages:
         x.append(len(x[2].split(' '))) #Word Count
         x.append(1 if '://' in x[2] else 0) #Has Link
-        x.append(1 if '<Media omitted>' in x[2] else 0)#Has Media
+        x.append(1 if has_media(x[2]) else 0)#Has Media
         x.append(x[1].hour) #Hour
         x.append(x[1].weekday) #Weekday
         x.append(x[1].month)#Month
