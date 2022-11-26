@@ -4,6 +4,7 @@ node_modules
 chatid
 __pycache__
 *.zip
+venv
 
 # local env files
 .env.local
@@ -17,7 +18,7 @@ yarn-error.log*
 
 #Test and configuration files
 *config.py
-*.txt
+whatsapp*.txt
 *.pickle
 chatanalysis*.json
 
