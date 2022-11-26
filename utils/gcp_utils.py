@@ -4,8 +4,7 @@ retry_count = 3
 publisher =  None #Global PubSub publisher
 
 def get_gcs_blob(bucket_name, file_path,credential_path):
-    #gcs_storage = storage.Client.from_service_account_json(credential_path)
-    gcs_storage = storage.Client()
+    gcs_storage = storage.Client.from_service_account_json(credential_path)
     gcs_bucket = gcs_storage.bucket(bucket_name)
     gcs_blob = gcs_bucket.blob(file_path.lower())
     return gcs_blob
