@@ -6,6 +6,7 @@ sys.path.insert(1, '../')
 import utils.gcp_utils as gcp_utils
 import pandas as pd
 
+_BUCKET_NAME = "chains-tc-in-1"
 _MEDIA_KEYWORDS = ['<Media omitted>','image omitted','video omitted','GIF omitted','document omitted']
 
 def has_media(media_string):
@@ -123,24 +124,23 @@ def process_data(file_bytes):
         x.append(x[1].replace(hour=0, second=0, minute=0)) #Plain Date
 
     return chat_messages,new_members,other_events
-    
-def data_process_callback():
+
+def data_process_callback(filename):
     # Get the contents of pubsub message and fetch file from gcs
     #bucket_name = "gs://chains-tc-in-1/input/whatsapp-nritech.txt"
-    bucket_name = "chains-tc-in-1"
     #file_path = "input/whatsapp-nritech.txt"
-    file_path = "input/whatsapp-2geda.txt"
-    out_file_path = "input/whatsapp-2geda-clean.parquet"
+    file_path = f"input/{filename}"
+    out_file_path = f"input/{filename.split('.')[0]}.parquet"
 
     # Do the heavy lifting and process records
-    chat_bytes = gcp_utils.read_file_from_gcs(bucket_name, file_path,"config.credential_path")
+    chat_bytes = gcp_utils.read_file_from_gcs(_BUCKET_NAME, file_path,"config.credential_path")
     chat_messages,new_members,other_events = process_data(chat_bytes)
 
     chat_msg_columns = ["phone_no","chat_time","chat_message","word_count","has_link","has_media","chat_hour","chat_month","chat_year","ds"]
     chat_msg_df = pd.DataFrame(chat_messages,columns=chat_msg_columns)
     #chat_msg_df.to_csv("chat_messages.csv",index=False)
 
-    gcp_utils.save_file_to_gcs(bucket_name, out_file_path,"config.credential_path",chat_msg_df.to_parquet(index=False))
+    gcp_utils.save_file_to_gcs(_BUCKET_NAME, out_file_path,"config.credential_path",chat_msg_df.to_parquet(index=False))
     
 
 #if __name__ == '__main__':

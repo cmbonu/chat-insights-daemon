@@ -15,9 +15,10 @@ def hello_world():
 def health_check():
     return {"Status": "Not Implemented"}
 
+#TODO Add parameter for filename and date partition
 @app.route("/load-chat-data")
 def run_data_process():
-    cpe.data_process_callback()
+    cpe.data_process_callback("some_random_group.txt")
     return {"Status": "Success"}
 
 if __name__ == '__main__':

@@ -21,6 +21,7 @@ yarn-error.log*
 whatsapp*.txt
 *.pickle
 chatanalysis*.json
+*.csv
 
 # Editor directories and files
 .idea
